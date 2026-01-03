@@ -72,6 +72,8 @@ stock_analysis_service/
 
 ### 백엔드 설정
 
+#### 방법 1: venv 사용 (기본)
+
 1. 가상환경 생성 및 활성화:
 ```bash
 python -m venv venv
@@ -81,6 +83,45 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 2. 의존성 설치:
 ```bash
 pip install -r requirements.txt
+```
+
+#### 방법 2: Anaconda 사용 (권장 - ML 프로젝트에 적합)
+
+**옵션 A: environment.yml 사용 (가장 간단)**
+```bash
+# 환경 생성 및 의존성 설치를 한 번에
+conda env create -f environment.yml
+
+# 환경 활성화
+conda activate stock_analysis
+```
+
+**옵션 B: 수동으로 환경 생성**
+```bash
+# Python 3.11 환경 생성
+conda create -n stock_analysis python=3.11
+
+# 환경 활성화
+conda activate stock_analysis
+
+# 의존성 설치
+pip install -r requirements.txt
+```
+
+**Anaconda 사용 시 장점:**
+- PyTorch, NumPy 등 ML 라이브러리 설치가 더 쉬움
+- 패키지 의존성 관리가 용이
+- 데이터 과학 프로젝트에 최적화
+- `environment.yml`로 환경을 쉽게 재현 가능
+
+**환경 비활성화:**
+```bash
+conda deactivate
+```
+
+**환경 삭제:**
+```bash
+conda env remove -n stock_analysis
 ```
 
 3. 환경 변수 설정:

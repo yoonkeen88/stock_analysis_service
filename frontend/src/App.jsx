@@ -1,23 +1,37 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import SplashScreen from './components/SplashScreen';
+import ThemeToggle from './components/ThemeToggle';
+import Home from './pages/Home';
+import Dashboard from './pages/Dashboard';
+import './styles/global.css';
+import './App.css';
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
+
   return (
-    <Router>
-      <div className="App">
-        <header className="App-header">
-          <h1>Stock Analysis Service</h1>
-          <p>최신 논문 기반 주식/비트코인 예측 웹 서비스</p>
-        </header>
-        <main>
-          <Routes>
-            <Route path="/" element={<div>Home Page - Coming Soon</div>} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
-  )
+    <>
+      {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
+      {!showSplash && (
+        <Router>
+          <div className="App">
+            <ThemeToggle />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/dashboard/:symbol" element={<Dashboard />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </Router>
+      )}
+    </>
+  );
 }
 
-export default App
+export default App;
 
