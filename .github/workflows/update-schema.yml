@@ -9,8 +9,12 @@ on:
 jobs:
   update-schema:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # git push를 위한 권한
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -21,11 +25,21 @@ jobs:
         run: |
           python scripts/generate_schema_diagram.py
       
-      - name: Commit changes
+      - name: Check for changes
+        id: verify-changed-files
+        run: |
+          if [ -n "$(git status --porcelain docs/SCHEMA_AUTO.md)" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push changes
+        if: steps.verify-changed-files.outputs.changed == 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs/SCHEMA_AUTO.md
-          git diff --staged --quiet || git commit -m "Auto-update schema diagram"
+          git commit -m "Auto-update schema diagram [skip ci]"
           git push
 
