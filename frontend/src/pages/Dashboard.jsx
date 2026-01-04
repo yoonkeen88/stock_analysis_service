@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getDashboard } from '../services/api';
 import StockChart from '../components/StockChart';
@@ -28,38 +28,10 @@ const Dashboard = () => {
     };
   }, []);
   
-  // 이전 symbol을 추적하여 중복 요청 방지
-  const prevSymbolRef = useRef(null);
-  const prevParamsRef = useRef({ period: null, interval: null });
-  
-  useEffect(() => {
-    // symbol, period, interval이 실제로 변경되었을 때만 실행
-    const paramsChanged = 
-      prevSymbolRef.current !== symbol ||
-      prevParamsRef.current.period !== period ||
-      prevParamsRef.current.interval !== interval;
-    
-    if (!paramsChanged && prevSymbolRef.current === symbol) {
-      console.log('[Dashboard] Parameters unchanged, skipping API call');
-      return;
-    }
-    
-    console.log('[Dashboard] useEffect triggered', { 
-      symbol, 
-      period,
-      interval,
-      prevSymbol: prevSymbolRef.current,
-      prevParams: prevParamsRef.current,
-      timestamp: new Date().toISOString() 
-    });
-    
-    prevSymbolRef.current = symbol;
-    prevParamsRef.current = { period, interval };
-    loadDashboardData();
-  }, [symbol, period, interval]);
-
   // 로딩 중 플래그로 중복 요청 방지
   const isLoadingRef = useRef(false);
+  const prevSymbolRef = useRef(null);
+  const prevParamsRef = useRef({ period: null, interval: null });
   
   const loadDashboardData = async () => {
     // 이미 로딩 중이면 중복 요청 방지
@@ -119,6 +91,32 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+  
+  useEffect(() => {
+    // symbol, period, interval이 실제로 변경되었을 때만 실행
+    const paramsChanged = 
+      prevSymbolRef.current !== symbol ||
+      prevParamsRef.current.period !== period ||
+      prevParamsRef.current.interval !== interval;
+    
+    if (!paramsChanged && prevSymbolRef.current === symbol) {
+      console.log('[Dashboard] Parameters unchanged, skipping API call');
+      return;
+    }
+    
+    console.log('[Dashboard] useEffect triggered', { 
+      symbol, 
+      period,
+      interval,
+      prevSymbol: prevSymbolRef.current,
+      prevParams: prevParamsRef.current,
+      timestamp: new Date().toISOString() 
+    });
+    
+    prevSymbolRef.current = symbol;
+    prevParamsRef.current = { period, interval };
+    loadDashboardData();
+  }, [symbol, period, interval]);
 
   if (loading) {
     return (

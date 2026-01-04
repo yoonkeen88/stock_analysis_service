@@ -16,6 +16,52 @@ except ImportError:
 class MarketDataService:
     """Service for handling market data operations using yf.download()"""
     
+    # Period와 Interval 유효 조합 정의
+    VALID_COMBINATIONS = {
+        '1d': ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '5d', '1wk', '1mo', '3mo'],
+        '5d': ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h', '5d', '1wk', '1mo'],
+        '1mo': ['1d', '5d', '1wk', '1mo'],
+        '3mo': ['1d', '5d', '1wk', '1mo'],
+        '6mo': ['1d', '5d', '1wk', '1mo'],
+        '1y': ['1d', '5d', '1wk', '1mo', '3mo'],
+        '2y': ['1d', '5d', '1wk', '1mo', '3mo'],
+        '5y': ['1d', '5d', '1wk', '1mo', '3mo'],
+        '10y': ['1d', '5d', '1wk', '1mo', '3mo'],
+        'ytd': ['1d', '5d', '1wk', '1mo', '3mo'],
+        'max': ['1d', '5d', '1wk', '1mo', '3mo'],
+    }
+    
+    @staticmethod
+    def _validate_period_interval(period: str, interval: str) -> tuple[str, str]:
+        """
+        Period와 Interval 조합이 유효한지 검증하고, 유효하지 않으면 조정
+        
+        Returns:
+            (validated_period, validated_interval)
+        """
+        period = period.lower()
+        interval = interval.lower()
+        
+        # Period가 정의되어 있으면 해당 interval 확인
+        if period in MarketDataService.VALID_COMBINATIONS:
+            valid_intervals = MarketDataService.VALID_COMBINATIONS[period]
+            if interval not in valid_intervals:
+                # 가장 가까운 유효한 interval 찾기
+                # 1d를 우선, 없으면 1wk, 1mo 순서
+                preferred = ['1d', '1wk', '1mo', '5d']
+                for pref in preferred:
+                    if pref in valid_intervals:
+                        print(f"[YFINANCE] ⚠️ Invalid combination: period={period}, interval={interval}")
+                        print(f"[YFINANCE] Adjusting interval to: {pref}")
+                        return period, pref
+                # 그래도 없으면 첫 번째 유효한 interval 사용
+                adjusted_interval = valid_intervals[0]
+                print(f"[YFINANCE] ⚠️ Invalid combination: period={period}, interval={interval}")
+                print(f"[YFINANCE] Adjusting interval to: {adjusted_interval}")
+                return period, adjusted_interval
+        
+        return period, interval
+    
     @staticmethod
     def get_market_data(
         symbol: str = "AAPL",
@@ -40,29 +86,53 @@ class MarketDataService:
             print(f"[YFINANCE] ========== START get_market_data ==========")
             print(f"[YFINANCE] Symbol: {symbol}")
             print(f"[YFINANCE] Period: {period}, Interval: {interval}")
+            
+            # Period와 Interval 조합 검증 및 조정
+            period, interval = MarketDataService._validate_period_interval(period, interval)
+            print(f"[YFINANCE] Using period={period}, interval={interval}")
             print(f"[YFINANCE] Using yf.download() (more stable)")
             
-            # Rate limiting 방지
-            time.sleep(0.1)
+            # Rate limiting 방지 - 더 긴 대기 시간
+            time.sleep(0.5)
             
             max_retries = 3
             hist = None
             info = {}
             
             # yf.download()로 시도 (더 안정적)
-            test_periods = [period, "5d", "1d"] if period not in ["5d", "1d"] else [period]
+            # 원하는 period를 먼저 시도하고, 실패하면 fallback
+            test_periods = [period]
             
-            for test_period in test_periods:
-                print(f"[YFINANCE] Trying period: {test_period}")
+            # period가 1mo 이상이면 5d도 시도 (더 안정적)
+            if period not in ["5d", "1d"]:
+                # 5d period에 맞는 interval로 조정
+                test_period_5d, test_interval_5d = MarketDataService._validate_period_interval("5d", interval)
+                test_periods.append(("5d", test_interval_5d))
+            
+            for test_period_info in test_periods:
+                # test_period_info가 튜플이면 (period, interval), 아니면 period만
+                if isinstance(test_period_info, tuple):
+                    test_period, test_interval = test_period_info
+                else:
+                    test_period = test_period_info
+                    test_interval = interval
+                
+                print(f"[YFINANCE] Trying period: {test_period}, interval: {test_interval}")
                 for attempt in range(max_retries):
                     try:
-                        print(f"[YFINANCE] Attempt {attempt + 1}/{max_retries}: yf.download('{symbol}', period='{test_period}', interval='{interval}')...")
+                        print(f"[YFINANCE] Attempt {attempt + 1}/{max_retries}: yf.download('{symbol}', period='{test_period}', interval='{test_interval}')...")
+                        
+                        # Rate limit 방지를 위한 추가 대기
+                        if attempt > 0:
+                            wait_time = min(2 * attempt, 5)  # 최대 5초
+                            print(f"[YFINANCE] Waiting {wait_time}s before retry...")
+                            time.sleep(wait_time)
                         
                         # yf.download() 사용 (더 안정적)
                         hist = yf.download(
                             symbol,
                             period=test_period,
-                            interval=interval,
+                            interval=test_interval,
                             progress=False,
                             threads=True
                         )
@@ -90,10 +160,11 @@ class MarketDataService:
                             print(f"[YFINANCE] History rows: {len(hist)}")
                             
                             if not hist.empty:
-                                # 성공하면 원하는 기간으로 다시 가져오기
-                                if test_period != period:
+                                # 성공하면 원하는 기간으로 다시 가져오기 (rate limit 피하기 위해 조건부)
+                                if test_period != period and attempt == 0:  # 첫 시도에서만
                                     try:
                                         print(f"[YFINANCE] Fetching full period: {period}...")
+                                        time.sleep(0.5)  # Rate limit 방지
                                         hist_full = yf.download(
                                             symbol,
                                             period=period,
@@ -129,7 +200,18 @@ class MarketDataService:
                         error_type = type(e).__name__
                         print(f"[YFINANCE] ⚠️ Exception ({error_type}): {error_msg}")
                         
-                        if attempt < max_retries - 1:
+                        # Rate limit 에러인 경우 더 긴 대기
+                        if "rate limit" in error_msg.lower() or "429" in error_msg or "YFRateLimitError" in error_type:
+                            if attempt < max_retries - 1:
+                                wait_time = min((attempt + 1) * 3, 10)  # 최대 10초
+                                print(f"[YFINANCE] Rate limit detected. Waiting {wait_time}s before retry...")
+                                time.sleep(wait_time)
+                                continue
+                            else:
+                                print(f"[YFINANCE] ❌ Rate limit: All attempts failed for period {test_period}")
+                                # Rate limit이면 바로 fallback으로 넘어가기
+                                break
+                        elif attempt < max_retries - 1:
                             wait_time = (attempt + 1) * 1
                             print(f"[YFINANCE] Retrying in {wait_time}s...")
                             time.sleep(wait_time)
