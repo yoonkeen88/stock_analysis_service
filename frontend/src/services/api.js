@@ -201,12 +201,14 @@ export const getModelAccuracy = async (modelName, symbol = null) => {
 /**
  * 통합 대시보드 데이터 조회
  * @param {string} symbol - 주식 심볼
+ * @param {string} period - 기간 (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max) - default: 1mo
+ * @param {string} interval - 간격 (1m, 2m, 5m, 15m, 30m, 60m, 1h, 1d, 5d, 1wk, 1mo, 3mo) - default: 1d
  */
-export const getDashboard = async (symbol) => {
-  console.log('[API] getDashboard called with symbol:', symbol);
+export const getDashboard = async (symbol, period = '1mo', interval = '1d') => {
+  console.log('[API] getDashboard called with symbol:', symbol, 'period:', period, 'interval:', interval);
   
-  // 캐시 키 생성
-  const cacheKey = `dashboard-${symbol}`;
+  // 캐시 키 생성 (period와 interval 포함)
+  const cacheKey = `dashboard-${symbol}-${period}-${interval}`;
   const now = Date.now();
   
   // 캐시 확인
@@ -232,10 +234,15 @@ export const getDashboard = async (symbol) => {
   }
   
   console.log('[API] API_BASE_URL:', API_BASE_URL);
-  console.log('[API] Full endpoint will be:', `${API_BASE_URL}/dashboard/${symbol}`);
+  console.log('[API] Full endpoint will be:', `${API_BASE_URL}/dashboard/${symbol}?period=${period}&interval=${interval}`);
   
   // 진행 중인 요청으로 표시
-  const requestPromise = apiClient.get(`/dashboard/${symbol}`)
+  const requestPromise = apiClient.get(`/dashboard/${symbol}`, {
+    params: {
+      period: period,
+      interval: interval
+    }
+  })
     .then(result => {
       // 성공 시 캐시 저장
       requestCache.set(cacheKey, {

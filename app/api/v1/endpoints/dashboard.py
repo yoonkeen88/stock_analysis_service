@@ -17,6 +17,8 @@ router = APIRouter()
 @router.get("/{symbol}", response_model=dict)
 async def get_stock_dashboard(
     symbol: str,
+    period: str = "1mo",
+    interval: str = "1d",
     db: Session = Depends(get_db)
 ):
     """
@@ -28,6 +30,8 @@ async def get_stock_dashboard(
     - Latest news articles
     
     - **symbol**: Stock or cryptocurrency symbol
+    - **period**: Period to fetch (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max) - default: 1mo
+    - **interval**: Data interval (1m, 2m, 5m, 15m, 30m, 60m, 1h, 1d, 5d, 1wk, 1mo, 3mo) - default: 1d
     """
     import logging
     logger = logging.getLogger(__name__)
@@ -56,9 +60,9 @@ async def get_stock_dashboard(
         # Get market data (with error handling for rate limits)
         print(f"[BACKEND] Creating MarketDataService...")
         market_service = MarketDataService()
-        print(f"[BACKEND] Calling get_market_data('{symbol}', period='1mo', interval='1d')...")
+        print(f"[BACKEND] Calling get_market_data('{symbol}', period='{period}', interval='{interval}')...")
         try:
-            market_data = market_service.get_market_data(symbol, period="1mo", interval="1d")
+            market_data = market_service.get_market_data(symbol, period=period, interval=interval)
             print(f"[BACKEND] ✅ Market data received: {len(market_data.get('history', []))} history points")
         except ValueError as e:
             error_msg = str(e)

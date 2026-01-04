@@ -16,6 +16,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // period와 interval 상태 추가
+  const [period, setPeriod] = useState('1mo');
+  const [interval, setInterval] = useState('1d');
+  
   // 컴포넌트 마운트 확인
   useEffect(() => {
     console.log('[Dashboard] Component mounted with symbol:', symbol);
@@ -23,26 +27,36 @@ const Dashboard = () => {
       console.log('[Dashboard] Component unmounted');
     };
   }, []);
-
+  
   // 이전 symbol을 추적하여 중복 요청 방지
   const prevSymbolRef = useRef(null);
+  const prevParamsRef = useRef({ period: null, interval: null });
   
   useEffect(() => {
-    // symbol이 실제로 변경되었을 때만 실행
-    if (prevSymbolRef.current === symbol) {
-      console.log('[Dashboard] Symbol unchanged, skipping API call');
+    // symbol, period, interval이 실제로 변경되었을 때만 실행
+    const paramsChanged = 
+      prevSymbolRef.current !== symbol ||
+      prevParamsRef.current.period !== period ||
+      prevParamsRef.current.interval !== interval;
+    
+    if (!paramsChanged && prevSymbolRef.current === symbol) {
+      console.log('[Dashboard] Parameters unchanged, skipping API call');
       return;
     }
     
     console.log('[Dashboard] useEffect triggered', { 
       symbol, 
+      period,
+      interval,
       prevSymbol: prevSymbolRef.current,
+      prevParams: prevParamsRef.current,
       timestamp: new Date().toISOString() 
     });
     
     prevSymbolRef.current = symbol;
+    prevParamsRef.current = { period, interval };
     loadDashboardData();
-  }, [symbol]);
+  }, [symbol, period, interval]);
 
   // 로딩 중 플래그로 중복 요청 방지
   const isLoadingRef = useRef(false);
@@ -67,12 +81,12 @@ const Dashboard = () => {
         throw new Error('종목 심볼이 없습니다.');
       }
       
-      console.log(`[Dashboard] About to call getDashboard('${symbol}')`);
+      console.log(`[Dashboard] About to call getDashboard('${symbol}', period='${period}', interval='${interval}')`);
       const startTime = Date.now();
       
       // ⭐ API 호출 전 로그
       console.log('[Dashboard] Calling getDashboard API...');
-      const result = await getDashboard(symbol);
+      const result = await getDashboard(symbol, period, interval);
       
       const loadTime = Date.now() - startTime;
       console.log(`[Dashboard] ✅ API call completed in ${loadTime}ms`);
@@ -154,6 +168,29 @@ const Dashboard = () => {
 
   const { market_data, predictions, news } = data;
 
+  // Period와 Interval 선택 옵션
+  const periodOptions = [
+    { value: '1d', label: '1일' },
+    { value: '5d', label: '5일' },
+    { value: '1mo', label: '1개월' },
+    { value: '3mo', label: '3개월' },
+    { value: '6mo', label: '6개월' },
+    { value: '1y', label: '1년' },
+    { value: '2y', label: '2년' },
+    { value: '5y', label: '5년' },
+  ];
+
+  const intervalOptions = [
+    { value: '1m', label: '1분' },
+    { value: '5m', label: '5분' },
+    { value: '15m', label: '15분' },
+    { value: '30m', label: '30분' },
+    { value: '1h', label: '1시간' },
+    { value: '1d', label: '1일' },
+    { value: '1wk', label: '1주' },
+    { value: '1mo', label: '1개월' },
+  ];
+
   return (
     <div className="dashboard fade-in">
       <div className="dashboard-header">
@@ -161,6 +198,38 @@ const Dashboard = () => {
           <button className="btn btn-ghost" onClick={() => navigate('/')}>
             ← 홈으로
           </button>
+          <div className="period-interval-selector">
+            <div className="selector-group">
+              <label htmlFor="period-select">기간:</label>
+              <select
+                id="period-select"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="period-select"
+              >
+                {periodOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="selector-group">
+              <label htmlFor="interval-select">간격:</label>
+              <select
+                id="interval-select"
+                value={interval}
+                onChange={(e) => setInterval(e.target.value)}
+                className="interval-select"
+              >
+                {intervalOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
         <h1>{market_data.symbol}</h1>
         <div className="price-info">
