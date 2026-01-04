@@ -1,12 +1,16 @@
 """
 Pydantic schemas for news data
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 
+# 공통 설정
+COMMON_CONFIG = ConfigDict(protected_namespaces=(), from_attributes=True)
+
 
 class NewsBase(BaseModel):
+    model_config = COMMON_CONFIG
     """Base schema for news"""
     symbol: str = Field(..., description="Stock or cryptocurrency symbol")
     title: str = Field(..., description="News title")
@@ -33,6 +37,8 @@ class NewsResponse(NewsBase):
 
 
 class NewsFetchRequest(BaseModel):
+    model_config = COMMON_CONFIG
+    
     """Schema for news fetch request"""
     symbol: str = Field(..., description="Stock or cryptocurrency symbol")
     limit: int = Field(default=10, ge=1, le=50, description="Maximum number of news articles")

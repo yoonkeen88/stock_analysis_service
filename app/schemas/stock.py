@@ -1,12 +1,17 @@
 """
 Pydantic schemas for stock data
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 
+# 공통 설정
+COMMON_CONFIG = ConfigDict(protected_namespaces=(), from_attributes=True)
+
 
 class StockDataBase(BaseModel):
+    model_config = COMMON_CONFIG
+    
     """Base schema for stock data"""
     symbol: str = Field(..., description="Stock symbol (e.g., AAPL, TSLA)")
     date: datetime
@@ -32,6 +37,8 @@ class StockDataResponse(StockDataBase):
 
 
 class StockQuoteResponse(BaseModel):
+    model_config = COMMON_CONFIG
+    
     """Schema for real-time stock quote"""
     symbol: str
     current_price: float
@@ -42,6 +49,7 @@ class StockQuoteResponse(BaseModel):
 
 
 class StockHistoryRequest(BaseModel):
+    model_config = COMMON_CONFIG
     """Schema for stock history request"""
     symbol: str = Field(..., description="Stock symbol")
     period: str = Field(default="1mo", description="Period: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max")

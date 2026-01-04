@@ -51,10 +51,27 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+    import logging
+    
+    # 로깅 설정
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    print("=" * 60)
+    print("🚀 Starting FastAPI Server")
+    print("=" * 60)
+    print(f"📡 Server will run on: http://0.0.0.0:8000")
+    print(f"📚 API Docs: http://localhost:8000/docs")
+    print(f"🔍 Health Check: http://localhost:8000/health")
+    print("=" * 60)
+    
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True
+        reload=True,
+        log_level="info"
     )
 

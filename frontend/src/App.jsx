@@ -8,11 +8,22 @@ import './styles/global.css';
 import './App.css';
 
 function App() {
+  console.log('[App] Component rendered');
+  
   const [showSplash, setShowSplash] = useState(true);
 
   const handleSplashFinish = () => {
+    console.log('[App] Splash finished, showing main app');
     setShowSplash(false);
   };
+  
+  // 컴포넌트 마운트 확인
+  useEffect(() => {
+    console.log('[App] Component mounted');
+    return () => {
+      console.log('[App] Component unmounted');
+    };
+  }, []);
 
   return (
     <>

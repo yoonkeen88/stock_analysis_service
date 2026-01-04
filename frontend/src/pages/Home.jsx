@@ -1,22 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import SearchBar from '../components/SearchBar';
 import './Home.css';
 
 /**
  * 홈 페이지 - 종목 검색 및 대시보드로 이동
  */
-const Home = () => {
-  const [symbol, setSymbol] = useState('');
-  const navigate = useNavigate();
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (symbol.trim()) {
-      navigate(`/dashboard/${symbol.trim().toUpperCase()}`);
-    }
-  };
-
-  const popularSymbols = ['AAPL', 'TSLA', 'MSFT', 'GOOGL', 'BTC-USD', 'ETH-USD'];
+const Home = () => { // 인기 종목 리스트 바꿔줘야함.
 
   return (
     <div className="home fade-in">
@@ -26,34 +14,8 @@ const Home = () => {
           최신 논문 기반 AI 모델로 주식과 비트코인을 예측하고 분석하세요
         </p>
         
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="search-input-wrapper">
-            <input
-              type="text"
-              placeholder="종목 심볼 입력 (예: AAPL, TSLA, BTC-USD)"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="btn btn-primary search-button">
-              검색
-            </button>
-          </div>
-        </form>
-
-        <div className="popular-symbols">
-          <p className="popular-label">인기 종목:</p>
-          <div className="symbol-tags">
-            {popularSymbols.map((sym) => (
-              <button
-                key={sym}
-                onClick={() => navigate(`/dashboard/${sym}`)}
-                className="symbol-tag"
-              >
-                {sym}
-              </button>
-            ))}
-          </div>
+        <div className="search-form">
+          <SearchBar />
         </div>
       </div>
 

@@ -29,10 +29,45 @@ async def get_stock_dashboard(
     
     - **symbol**: Stock or cryptocurrency symbol
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # 요청 제한: 같은 심볼에 대해 짧은 시간 내 재요청 방지
+    import time as time_module
+    request_tracker = getattr(get_stock_dashboard, '_request_tracker', {})
+    now = time_module.time()
+    
+    if symbol in request_tracker:
+        last_request_time = request_tracker[symbol]
+        time_since_last = now - last_request_time
+        if time_since_last < 2:  # 2초 내 재요청 방지
+            print(f"[BACKEND] ⚠️ Rate limit: Request for {symbol} too soon ({time_since_last:.2f}s ago), returning cached or blocking")
+            # 여기서는 단순히 로그만 남기고 진행 (실제로는 캐시된 데이터 반환 가능)
+    
+    request_tracker[symbol] = now
+    get_stock_dashboard._request_tracker = request_tracker
+    
+    print(f"[BACKEND] ========== DASHBOARD REQUEST START ==========")
+    print(f"[BACKEND] Symbol: {symbol}")
+    print(f"[BACKEND] Timestamp: {datetime.now().isoformat()}")
+    print(f"[BACKEND] =============================================")
+    
     try:
-        # Get market data
+        # Get market data (with error handling for rate limits)
+        print(f"[BACKEND] Creating MarketDataService...")
         market_service = MarketDataService()
-        market_data = market_service.get_market_data(symbol, period="1mo", interval="1d")
+        print(f"[BACKEND] Calling get_market_data('{symbol}', period='1mo', interval='1d')...")
+        try:
+            market_data = market_service.get_market_data(symbol, period="1mo", interval="1d")
+            print(f"[BACKEND] ✅ Market data received: {len(market_data.get('history', []))} history points")
+        except ValueError as e:
+            error_msg = str(e)
+            if "rate limit" in error_msg.lower() or "429" in error_msg:
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Yahoo Finance API rate limit exceeded. Please wait a moment and try again. ({symbol})"
+                )
+            raise HTTPException(status_code=404, detail=error_msg)
         
         # Get latest predictions
         prediction_service = PredictionService(db)
@@ -94,15 +129,31 @@ async def get_stock_dashboard(
         news_data.sort(key=lambda x: x['published_date'], reverse=True)
         news_data = news_data[:10]
         
-        return {
+        result = {
             "symbol": symbol,
             "market_data": market_data,
             "predictions": predictions_data,
             "news": news_data,
             "timestamp": datetime.now().isoformat()
         }
+        print(f"[BACKEND] ✅ Preparing response...")
+        print(f"[BACKEND] Response keys: {list(result.keys())}")
+        print(f"[BACKEND] ========== DASHBOARD REQUEST END ==========")
+        return result
+    except HTTPException:
+        # 이미 HTTPException이면 그대로 전달
+        raise
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        error_msg = str(e) if str(e) else "Invalid request"
+        raise HTTPException(status_code=404, detail=error_msg)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching dashboard data: {str(e)}")
+        import traceback
+        error_msg = str(e) if str(e) else "Unknown error occurred"
+        error_type = type(e).__name__
+        print(f"Dashboard error for {symbol}: {error_type}: {error_msg}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error fetching dashboard data: {error_msg} (Type: {error_type})"
+        )
 

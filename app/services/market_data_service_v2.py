@@ -64,6 +64,7 @@ class MarketDataService:
                             period=test_period,
                             interval=interval,
                             progress=False,
+                            show_errors=False,
                             threads=True
                         )
                         
@@ -99,6 +100,7 @@ class MarketDataService:
                                             period=period,
                                             interval=interval,
                                             progress=False,
+                                            show_errors=False,
                                             threads=True
                                         )
                                         
@@ -155,6 +157,7 @@ class MarketDataService:
                             period=fallback_period,
                             interval=interval,
                             progress=False,
+                            show_errors=False,
                             threads=True
                         )
                         

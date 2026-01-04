@@ -7,9 +7,8 @@ from typing import List
 from app.core.database import get_db
 from app.schemas.stock import StockHistoryRequest, StockQuoteResponse
 from app.services.stock_service import StockService
-
+from app.services.market_data_service import MarketDataService
 router = APIRouter()
-
 
 @router.get("/quote/{symbol}", response_model=StockQuoteResponse)
 async def get_stock_quote(
